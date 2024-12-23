@@ -7,6 +7,7 @@ import { doc, setDoc } from "firebase/firestore";
 import { db } from "@/firebase";
 import Loading from "./Loading";
 import Login from "./Login";
+import Button from "./Button";
 
 const fugaz = Fugaz_One({
   weight: ["400"],
@@ -16,8 +17,29 @@ const fugaz = Fugaz_One({
 
 export default function Dashboard() {
   const { currentUser, userDataObj, setUserDataObj, loading } = useAuth();
+  const [selectedMood, setSelectedMood] = useState(null);
+  const [comment, setComment] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
   const [data, setData] = useState({});
   const now = new Date();
+
+  const handleCommentChange = (e) => {
+    setComment(e.target.value);
+  };
+
+  const handleMoodSelect = (moodValue) => {
+    setSelectedMood(moodValue);
+  };
+
+  const handleSubmit = async () => {
+    if (selectedMood === null) {
+      setErrorMsg("Select a mood before saving");
+      return;
+    }
+    await handleSetMood(selectedMood, comment);
+    setComment("");
+    setSelectedMood(null);
+  };
 
   function countValues() {
     let total_number_of_days = 0;
@@ -25,15 +47,22 @@ export default function Dashboard() {
     for (let year in data) {
       for (let month in data[year]) {
         for (let day in data[year][month]) {
-          let days_mood = data[year][month][day];
-          total_number_of_days++;
-          sum_moods += days_mood;
+          const dayData = data[year][month][day];
+          const mood = typeof dayData === "object" ? dayData.mood : dayData;
+
+          if (typeof mood === "number") {
+            total_number_of_days++;
+            sum_moods += mood;
+          }
         }
       }
     }
     return {
       num_days: total_number_of_days,
-      average_mood: sum_moods / total_number_of_days,
+      average_mood:
+        total_number_of_days > 0
+          ? (sum_moods / total_number_of_days).toFixed(2)
+          : 0,
     };
   }
 
@@ -44,7 +73,7 @@ export default function Dashboard() {
     }M`,
   };
 
-  async function handleSetMood(mood) {
+  async function handleSetMood(mood, comment = "") {
     const day = now.getDate();
     const month = now.getMonth();
     const year = now.getFullYear();
@@ -57,19 +86,26 @@ export default function Dashboard() {
         newData[year][month] = {};
       }
 
-      newData[year][month][day] = mood;
+      newData[year][month][day] = {
+        mood,
+        comment: comment || "",
+      };
+
       // update the current state
       setData(newData);
       // update the global state
       setUserDataObj(newData);
-      // update firebase
+
       const docRef = doc(db, "users", currentUser.uid);
       const res = await setDoc(
         docRef,
         {
           [year]: {
             [month]: {
-              [day]: mood,
+              [day]: {
+                mood: mood,
+                comment: comment || "",
+              },
             },
           },
         },
@@ -116,7 +152,9 @@ export default function Dashboard() {
                 {status.replaceAll("_", " ")}
               </p>
               <p className={"text-base sm:text-lg " + fugaz.className}>
-                {statuses[status]}{status === "num_days" ? " 🔥" : ""}
+                {statuses[status]}
+                {status === "num_days" ? " 🔥" : ""}
+                {status === "num_days" > 10 ? "🔥" : ""}
               </p>
             </div>
           );
@@ -131,18 +169,23 @@ export default function Dashboard() {
       </h4>
       <div className="flex items-stretch flex-wrap gap-4">
         {Object.keys(moods).map((mood, moodIndex) => {
+          const currentMoodValue = moodIndex + 1;
           return (
             <button
               onClick={() => {
-                const currentMoodValue = moodIndex + 1;
-                handleSetMood(currentMoodValue);
+                handleMoodSelect(currentMoodValue);
+                setErrorMsg("");
               }}
-              className={
-                "p-4 px-5 rounded-2xl purpleShadow duration-200 bg-indigo-50 hover:bg-[lavender] text-center flex flex-col gap-2 flex-1 items-center"
-              }
+              className={`p-4 px-5 rounded-2xl purpleShadow duration-200 
+                ${
+                  selectedMood === currentMoodValue
+                    ? "bg-indigo-200 ring-2 ring-indigo-500"
+                    : "bg-indigo-50 hover:bg-[lavender]"
+                } 
+                text-center flex flex-col gap-2 flex-1 items-center`}
               key={moodIndex}
             >
-              <p className="text-4xl sm:text-5xl md:text-6xl mb-4 ">
+              <p className="text-4xl sm:text-5xl md:text-6xl mb-4">
                 {moods[mood]}
               </p>
               <p
@@ -157,8 +200,27 @@ export default function Dashboard() {
           );
         })}
       </div>
-      <Calendar completeData={data} handleSetMood={handleSetMood} />
-      
+      <Calendar completeData={data} />
+      <div className="w-full flex flex-col items-center justiy-center sm:items-start mt-4 space-y-4">
+        <textarea
+          className="w-full p-2 border-2 border-indigo-400 focus:ring-0 focus:outline-none focus:border-indigo-600 focus:border-2 rounded-lg"
+          placeholder="Would you like to describe how you felt on this day? (Optional)"
+          value={comment}
+          onChange={handleCommentChange}
+        />
+        <Button
+          text={selectedMood ? "Save" : "Select Your Mood First"}
+          clickHandler={handleSubmit}
+          disabled={selectedMood === null}
+        />
+        {errorMsg ? (
+          <p className={"text-red-500 font-semibold " + fugaz.className}>
+            {errorMsg}
+          </p>
+        ) : (
+          ""
+        )}
+      </div>
     </div>
   );
 }

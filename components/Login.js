@@ -12,13 +12,15 @@ const fugaz = Fugaz_One({
 
 export default function Login() {
   const { signUp, login } = useAuth();
+  const [showNameInput, setShowNameInput] = useState(true);
   const [email, setEmail] = useState("");
+  const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
   const [authenticating, setAuthenticating] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
 
   const onSubmit = async () => {
-    if (!email || !password || password.length < 6) {
+    if (!email || !password || password.length < 6 ) {
       return;
     }
     setAuthenticating(true);
@@ -33,7 +35,8 @@ export default function Login() {
     } catch (err) {
       console.log(err.message);
     } finally {
-      setAuthenticating(false)
+      setShowNameInput(false)
+      setAuthenticating(false);
     }
   };
 
@@ -58,7 +61,11 @@ export default function Login() {
         placeholder="Password"
       />
       <div className="max-w-[400px] w-full mx-auto">
-        <Button clickHandler={onSubmit}  text={authenticating ? "Submitting" : "Submit"} full />
+        <Button
+          clickHandler={onSubmit}
+          text={authenticating ? "Submitting" : "Submit"}
+          full
+        />
       </div>
       <p className="text-center">
         {isRegister ? "Already have an account? " : "Don't have an account? "}

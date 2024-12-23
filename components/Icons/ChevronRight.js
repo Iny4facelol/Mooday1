@@ -12,7 +12,7 @@ export default function ChevronRight() {
       stroke-width="2"
       stroke-linecap="round"
       stroke-linejoin="round"
-      class="icon icon-tabler icons-tabler-outline icon-tabler-circle-chevron-right"
+      className="icon icon-tabler icons-tabler-outline icon-tabler-circle-chevron-right"
     >
       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
       <path d="M11 9l3 3l-3 3" />

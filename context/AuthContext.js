@@ -1,11 +1,12 @@
 "use client";
 import { auth, db } from "@/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
+  updateProfile,
 } from "firebase/auth";
 
 import React, { useContext, useState, useEffect } from "react";
@@ -21,8 +22,72 @@ export const AuthProvider = ({ children }) => {
   const [userDataObj, setUserDataObj] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  function signUp(email, password) {
-    return createUserWithEmailAndPassword(auth, email, password);
+  async function signUp(email, password) {
+    try {
+      // 1. Crear el usuario con email y password
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+      // 2. Actualizar el perfil con el displayName
+      if (displayName) {
+        await updateProfile(userCredential.user, {
+          displayName: displayName,
+        });
+      }
+
+      // 3. Opcional: Crear un documento en Firestore para el usuario
+      const userDocRef = doc(db, "users", userCredential.user.uid);
+      await setDoc(
+        userDocRef,
+        {
+          email: email,
+          displayName: displayName,
+          createdAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+
+      // 4. Forzar un refresh para asegurar que tenemos la información actualizada
+      await userCredential.user.reload();
+
+      return userCredential;
+    } catch (error) {
+      console.error("Error in signUp:", error);
+      throw error;
+    }
+  }
+
+  async function updateUserDisplayName(newDisplayName) {
+    try {
+      console.log("currentUser:", currentUser);
+      if (!currentUser) throw new Error("No user logged in");
+
+      await updateProfile(currentUser, {
+        displayName: newDisplayName,
+      });
+
+      // Actualizar también en Firestore si lo deseas
+      const userDocRef = doc(db, "users", currentUser.uid);
+      await setDoc(
+        userDocRef,
+        {
+          displayName: newDisplayName,
+        },
+        { merge: true }
+      );
+
+      // Forzar refresh
+      await currentUser.reload();
+      setCurrentUser({ ...currentUser });
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error updating display name:", error);
+      throw error;
+    }
   }
 
   function login(email, password) {
@@ -54,6 +119,8 @@ export const AuthProvider = ({ children }) => {
           firebaseData = docSnap.data();
           console.log(firebaseData);
         }
+        console.log("firebasedata" ,firebaseData);
+        
         setUserDataObj(firebaseData);
       } catch (error) {
         console.log(error.message);
@@ -71,9 +138,8 @@ export const AuthProvider = ({ children }) => {
     signUp,
     logout,
     login,
-    loading
+    loading,
+    updateUserDisplayName,
   };
-  return <AuthContext.Provider value={value}>
-    {children}
-    </AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
