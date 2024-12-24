@@ -42,6 +42,7 @@ const dayList = [
 ];
 export default function Calendar({ demo, completeData }) {
   const [openModal, setOpenModal] = useState(false);
+  const [selectedDayData, setSelectedDayData] = useState(null);
   const now = new Date();
   const currMonth = now.getMonth();
   const [selectedMonth, setSelectedMonth] = useState(
@@ -53,6 +54,13 @@ export default function Calendar({ demo, completeData }) {
   const data = completeData?.[selectedYear]?.[numericMonth] || {};
 
   console.log(data);
+
+  const handleDayClick = (dayData) => {
+    if (dayData?.comment) {
+      setSelectedDayData(dayData);
+      setOpenModal(true);
+    }
+  };
 
   function handleIncrementMonth(val) {
     // value +1 -1
@@ -167,18 +175,13 @@ export default function Calendar({ demo, completeData }) {
                       (dayData?.comment ? " cursor-pointer" : "")
                     }
                     key={dayOfWeekOfIndex}
-                    onClick={dayData?.comment ? () => setOpenModal(true) : ""}
+                    onClick={() => handleDayClick(dayData)}
                   >
                     <p className="font-semibold">{dayIndex}</p>
                     <p>
                       {getEmojiForDay(dayData)}{" "}
                       {dayData?.comment && <span className="text-xs">💭</span>}
                     </p>
-                    <ModalCust
-                      setOpenModal={setOpenModal}
-                      openModal={openModal}
-                      comment={data?.comment}
-                    />
                   </div>
                 );
               })}
@@ -186,6 +189,11 @@ export default function Calendar({ demo, completeData }) {
           );
         })}
       </div>
+      <ModalCust
+        setOpenModal={setOpenModal}
+        openModal={openModal}
+        comment={selectedDayData?.comment}
+      />
     </div>
   );
 }

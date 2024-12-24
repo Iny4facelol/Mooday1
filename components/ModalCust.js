@@ -10,12 +10,11 @@ const fugaz = Fugaz_One({
 });
 
 export function ModalCust({ setOpenModal, openModal, comment }) {
-  
 
+  
   return (
     <>
       <Modal
-        className="bg-indigo-400/[.01]"
         show={openModal}
         onClose={() => setOpenModal(false)}
       >
